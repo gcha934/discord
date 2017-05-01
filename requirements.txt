@@ -1,5 +1,5 @@
 discord.py==0.16.7
 lxml
-re
 json
 pendulum
+./oppai/pyoppai
