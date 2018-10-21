@@ -4,9 +4,9 @@ import aiohttp
 import sys, traceback
 import os
 import pendulum
-import re
-import json
 from oppai import parser
+from functions import beatmaps,printmsg,oppaiurl
+import json
 apikey='c822e841c28e578df4a621ed8820771212c62219'
 client = discord.Client()
 refreshtime = int(30)
@@ -60,27 +60,28 @@ async def on_message(message):
                 f.write(i)
         f.truncate()
         f.close()
+    #used for testing
     if message.content.startswith('^b/'):
-        req=''
-        url="https://osu.ppy.sh/osu/"+message.content[3:]
-        async with aiohttp.request('GET', url) as r:
-            req=await r.text()
-            if not req:
-                await client.send_message(message.channel, 'invalid string')
-
-            x=parser(req)
-            if type(x)==str:
-                await client.send_message(message.channel,x)
+            req=await oppaiurl(client,message.content[3:])
+            if req is None:
+                await client.send_message(message.channel,"invalid string")
             else:
-                await client.send_message(message.channel,
-                        "%s - %s [%s] (by %s)\n"
-                        "CS%g OD%g AR%g HP%g\n"
-                        "max combo: %d\n"
-                        "stars: %.3g\n"
-                        "%.3gpp for %g%%\n"
-                        "%.3gpp for %.2g%%\n"
-                        "%.3gpp for %g with HDHR" %
-                        (x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15]))   
+                x=parser(req)
+                if type(x)==str:
+                    await client.send_message(message.channel,x)
+                else:
+                    url="https://osu.ppy.sh/b/"+message.content[3:]
+                            
+                    em = discord.Embed()
+                    em.title = "**:heart:" +"Latest Ranked**"
+                    em.description= "**[%s - %s [%s] (by %s)](%s)**\n" "**CS%g OD%g AR%g HP%g**\n""**max combo: %dx %.3g★**\n""%.3gpp for %g%%\n""%.3gpp for %.2g%%\n""%.3gpp for %g%% with HDHR" %(x[0],x[1],x[2],x[3],url,x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15])
+                    em.set_thumbnail(url='https://b.ppy.sh/thumb/554084l.jpg')
+                  
+                    await client.send_message(message.channel,embed=em)
+    
+        
+        
+        
 @client.event
 async def qualifiedtester():
     
@@ -101,71 +102,35 @@ async def qualifiedtester():
                  print("retrying")
             else:
                 break
-        #seperate beatmaps into either ranked/qualified
+
+        #seperate beatmaps into either ranked/qualified-----------------------------------------
         for i in update:
            if i["approved"]=="1" or i["approved"]=="2" or i["approved"]=="4":
                #append only if the beatmap not already in the ranked list, if map has been ranked recently then remove from qualified list
                if not next((item for item in ranked if item["beatmapset_id"] == i["beatmapset_id"]),None):
                    ranked.append(i)
-                   await printmsg(loopcounter,i,'ranked!')
+                   await printmsg(client,loopcounter,i,'Ranked',apikey,enabled)
                    if i in qualified:
                        qualified.remove(i)
            elif i["approved"]=="3":
                 if not next((item for item in qualified if item["beatmapset_id"] == i["beatmapset_id"]),None):
                    qualified.append(i)
-                   await printmsg(loopcounter,i,'qualified!')   
+                   await printmsg(client,loopcounter,i,'Qualified',apikey,enabled)   
         for i in qualified:
-            if i['beatmapset_id'] not in update and i['beatmapset_id'] in beatmap:
-                await printmsg(loopcounter,i,'disqualified!')
+            if  not any(i['beatmapset_id']==j['beatmapset_id'] for j in update) and any(i['beatmapset_id']==j['beatmapset_id'] for j in beatmap):
+                await printmsg(client,loopcounter,i,'Disqualified',apikey,enabled)
                 qualified.remove(i)
+        #debug------------------------------------------------------------------------------------------------------------------      
         if len(beatmap) !=len(update):           
             print(str(len(beatmap))+'--'+str(len(update))+'--'+time)
+        #-----------------------------------------------------------------------------------------------------------------------
         beatmap=update
         loopcounter+=1
         await asyncio.sleep(refreshtime)
 
 
     
-#creates a list of beatmaps given time
-async def beatmaps(apikey,time,beatmapsetid):
-    url = 'https://osu.ppy.sh/api/get_beatmaps?k='+apikey+time+beatmapsetid
-    urltrim=re.sub('[\s+]', '', url)
-    try:
-        async with aiohttp.request('GET', urltrim) as r:
-            req=await r.text()
-            if type(req)!= None:
-                return(json.loads(req))
-            else:
-                return None
-    except Exception as e:
-         traceback.print_exc(file=sys.stdout)
-         return(None)
-  #if map disappears from api then it has been disqualified               
-      
-async def printmsg(loopcounter,beatmap,status):
-    if loopcounter>=1:
-        print(beatmap['artist']+'-'+beatmap['title']+" is now "+status)
-        req=''
-        url='https://osu.ppy.sh/api/get_beatmaps?k='+apikey+'b='+beatmap['beatmap_id']
-        async with aiohttp.request('GET', url) as r:
-            req=await r.text()
-            if not req:
-                await client.send_message(message.channel, 'invalid string')
 
-            x=parser(req)
-            if type(x)==str:
-                await client.send_message(message.channel,x)
-            else:
-                await client.send_message(message.channel,
-                                         
-                        "%s - %s [%s] (by %s) is now %s\n"
-                        "CS%g OD%g AR%g HP%g\n"
-                        "max combo: %d\n"
-                        "stars: %.3g\n"
-                        "%.3g pp for %g%%\n"
-                        "%.3g pp for %.2g%%\n"
-                        "%.3g pp for %g%% with HDHR" %
-                        (x[0],x[1],x[2],x[3],status,x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15]))
 
 client.loop.create_task(qualifiedtester())
 client.loop.create_task(bot_gamestatus())

@@ -85,7 +85,7 @@ def main(filepath):
     mods = pyoppai.hd | pyoppai.hr
     pyoppai.apply_mods(b, mods)
     # mods are map-changing, recompute diff
-    stars, aim, speed, _, _, _, _ = pyoppai.d_calc(dctx, b)
+    stars2, aim, speed, _, _, _, _ = pyoppai.d_calc(dctx, b)
 
 
     #print_diff(stars, aim, speed)
