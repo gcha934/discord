@@ -7,7 +7,7 @@ import pendulum
 from oppai import parser
 from functions import beatmaps,printmsg,oppaiurl
 import json
-apikey='c822e841c28e578df4a621ed8820771212c62219'
+apikey='apikey'
 client = discord.Client()
 refreshtime = int(30)
 #used for how long the database is to go back
