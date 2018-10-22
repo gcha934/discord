@@ -134,7 +134,7 @@ async def qualifiedtester():
 
 client.loop.create_task(qualifiedtester())
 client.loop.create_task(bot_gamestatus())
-client.run('MzA2NDA2MjU1MTc2NDUwMDYw.C-JtDA.OsvJr26ypsooUVJEN5GK2cUXZQo')
+client.run('token')
 
 
 
